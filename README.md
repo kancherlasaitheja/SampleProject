@@ -25,7 +25,9 @@ context, and MP4 clip export.
 5. If `OPENAI_API_KEY` exists, the backend extracts audio and transcribes it
    with `gpt-4o-mini-transcribe` by default.
 6. The app creates clip suggestions from real speech segments.
-7. Export renders a real MP4 clip with FFmpeg trim and crop.
+7. Export re-sends the source file with the selected clip timing and returns a
+   real MP4 response. This avoids relying on cross-request `/tmp` state in
+   Vercel serverless functions.
 
 ## Environment
 
@@ -65,5 +67,6 @@ This repo is ready for the connected Vercel project. Use:
 - Production branch: `master`
 - Build command: `npm run build`
 
-For production-scale videos, replace `/tmp` job storage with durable object
-storage such as Vercel Blob, S3, or R2, and move long renders to a queue worker.
+For production-scale videos, replace repeated browser uploads with durable
+object storage such as Vercel Blob, S3, or R2, and move long renders to a queue
+worker.

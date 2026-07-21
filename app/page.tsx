@@ -303,7 +303,7 @@ export default function Home() {
   }
 
   async function queueExport() {
-    if (!analysis) {
+    if (!analysis || !sourceFile) {
       const entry = {
         id: `draft-${Date.now()}`,
         title: `${activeClip.title} - draft only`,
@@ -317,31 +317,36 @@ export default function Home() {
     setStatusMessage("Rendering MP4 clip with FFmpeg...");
 
     try {
+      const form = new FormData();
+      form.set("file", sourceFile);
+      form.set("clip", JSON.stringify(activeClip));
+      form.set("aspectRatio", aspectRatio);
+
       const response = await fetch("/api/video/export", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobId: analysis.jobId,
-          clipId: activeClip.id,
-          aspectRatio,
-        }),
+        body: form,
       });
-      const payload = (await response.json()) as
-        | { fileName: string; downloadUrl: string }
-        | { error: string };
 
-      if (!response.ok || "error" in payload) {
-        throw new Error("error" in payload ? payload.error : "Clip export failed.");
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string }
+          | null;
+        throw new Error(payload?.error ?? "Clip export failed.");
       }
 
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const fileName =
+        response.headers.get("X-ClipForge-Filename") ??
+        `${activeClip.id}-${aspectRatio.replace(":", "x")}.mp4`;
       const entry = {
         id: `${activeClip.id}-${Date.now()}`,
         title: `${activeClip.title} - ${aspectRatio} MP4`,
         description: "Rendered from the uploaded source with FFmpeg trim and crop.",
-        downloadUrl: payload.downloadUrl,
+        downloadUrl,
       };
       setPublishQueue((items) => [entry, ...items]);
-      setStatusMessage(`Export ready: ${payload.fileName}`);
+      setStatusMessage(`Export ready: ${fileName}`);
     } catch (error) {
       setStatusMessage(error instanceof Error ? error.message : "Clip export failed.");
     } finally {

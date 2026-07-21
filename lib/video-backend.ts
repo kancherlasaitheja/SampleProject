@@ -566,15 +566,20 @@ function aspectFilter(aspectRatio: string) {
   return "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920";
 }
 
-export async function exportClip(jobId: string, clipId: string, aspectRatio: string) {
-  assertFfmpeg();
-  const manifest = await readJobManifest(jobId);
-  const clip = manifest.clips.find((item) => item.id === clipId);
-  if (!clip) {
-    throw new Error("Clip was not found.");
+async function renderClipToFile(
+  sourcePath: string,
+  dir: string,
+  clip: ClipSuggestion,
+  aspectRatio: string,
+) {
+  if (
+    typeof clip.startSeconds !== "number" ||
+    typeof clip.endSeconds !== "number" ||
+    clip.endSeconds <= clip.startSeconds
+  ) {
+    throw new Error("Clip timing is invalid.");
   }
 
-  const dir = jobDir(jobId);
   const fileName = `${clip.id}-${aspectRatio.replace(":", "x")}.mp4`;
   const outputPath = path.join(dir, fileName);
   const duration = Math.max(1, clip.endSeconds - clip.startSeconds);
@@ -586,7 +591,7 @@ export async function exportClip(jobId: string, clipId: string, aspectRatio: str
       "-ss",
       String(clip.startSeconds),
       "-i",
-      manifest.sourcePath,
+      sourcePath,
       "-t",
       String(duration),
       "-vf",
@@ -608,7 +613,48 @@ export async function exportClip(jobId: string, clipId: string, aspectRatio: str
 
   return {
     fileName,
-    downloadUrl: `/api/video/download/${jobId}/${fileName}`,
+    outputPath,
+    file: await readFile(outputPath),
+  };
+}
+
+export async function exportClip(jobId: string, clipId: string, aspectRatio: string) {
+  assertFfmpeg();
+  const manifest = await readJobManifest(jobId);
+  const clip = manifest.clips.find((item) => item.id === clipId);
+  if (!clip) {
+    throw new Error("Clip was not found.");
+  }
+
+  const dir = jobDir(jobId);
+  const rendered = await renderClipToFile(
+    manifest.sourcePath,
+    dir,
+    clip,
+    aspectRatio,
+  );
+
+  return {
+    fileName: rendered.fileName,
+    downloadUrl: `/api/video/download/${jobId}/${rendered.fileName}`,
+  };
+}
+
+export async function exportUploadedClip(
+  file: File,
+  clip: ClipSuggestion,
+  aspectRatio: string,
+) {
+  assertFfmpeg();
+  const jobId = randomUUID();
+  const dir = jobDir(jobId);
+  await mkdir(dir, { recursive: true });
+  const sourcePath = await saveUpload(file, dir);
+  const rendered = await renderClipToFile(sourcePath, dir, clip, aspectRatio);
+
+  return {
+    fileName: rendered.fileName,
+    file: rendered.file,
   };
 }
 
