@@ -193,7 +193,7 @@ dialog::backdrop { background: #06091780; -webkit-backdrop-filter: blur(8px); ba
   .scene-heading h1 { font-size: 52px; }
   .detail-card { width: 245px; left: 5%; padding: 15px; }
   .detail-card h2 { font-size: 16px; }
-  .planet-dock { left: 34%; padding: 13px 12px 8px; }
+  .planet-dock { left: max(34%, calc(5% + 265px)); padding: 13px 12px 8px; }
   .world-button { min-width: 39px; font-size: 6px; }
   .world-orb { width: 20px; height: 20px; }
 }
