@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ClipForge Studio",
-  description: "AI-assisted long video to short-form clip editor prototype.",
+  title: "Anime Sanyasi — Digital Worlds",
+  description: "Immersive digital projects built for curiosity.",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
